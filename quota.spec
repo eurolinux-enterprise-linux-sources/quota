@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 3.17
-Release: 18%{?dist}
+Release: 20%{?dist}
 License: BSD and GPLv2+
 URL: http://sourceforge.net/projects/linuxquota/
 Group: System Environment/Base
@@ -74,6 +74,24 @@ Patch29: quota-4.00_pre1-Initialize-v2r1-ddquot-padding-in-dump.patch
 Patch30: quota-4.00_pre1-Make-dirname-static.patch
 # Bug #730057, in upstream 4.01, SF#3393151
 Patch31: quota-4.00-Do-not-report-missing-utmp-record-to-syslog.patch
+# Bug #717948, in upstream 4.00_pre2, SF#3347047
+Patch32: quota-4.00_pre1-Report-quotacheck-failures-by-return-code.patch
+# Bug #717948, in upstream 4.00_pre2, SF#3347047
+Patch33: quota-4.00_pre1-get_qf_name-does-not-check-quota-file-presence.patch
+# Bug #846120, in upstream after 4.01, SF#3602786
+Patch34: quota-3.17-Do-not-fiddle-with-quota-files-on-XFS-and-GFS.patch
+# Bug #890051, in upstream after 4.01, SF#3600120
+Patch35: quota-3.17-Recognize-units-at-block-limits-by-setquota.patch
+# Bug #890051, in upstream after 4.01, SF#3600120
+Patch36: quota-4.01-Recognize-block-limit-units-on-setquota-standard-inp.patch
+# Bug #890051, in upstream after 4.01, SF#3600120
+Patch37: quota-3.17-Recognize-units-at-block-limits-by-edquota.patch
+# Bug #890051, in upstream after 4.01, SF#3600120
+Patch38: quota-3.17-Recognize-units-at-inode-limits-by-setquota.patch
+# Bug #890051, in upstream after 4.01, SF#3600120
+Patch39: quota-3.17-Recognize-units-at-inode-limits-by-edquota.patch
+# Bug #890051, submited to upstream
+Patch40: quota-3.17-Close-FILE-handles-on-error.patch
 
 
 %description
@@ -129,6 +147,15 @@ on remote machines.
 %patch29 -p1 -b .initizalize_ddquot_paddding
 %patch30 -p1 -b .static_dirname
 %patch31 -p1 -b .suppress_missing_utmp
+%patch32 -p1 -b .report_quotacheck_failures
+%patch33 -p1 -b .improve_quotacheck_message
+%patch34 -p1 -b .gfs_files
+%patch35 -p1 -b .setquota_block_units
+%patch36 -p1 -b .setquota_block_units_stdin
+%patch37 -p1 -b .edquota_block_units
+%patch38 -p1 -b .setquota_inode_units
+%patch39 -p1 -b .edquota_inode_units
+%patch40 -p1 -b .close_file_handles
 
 
 #fix typos/mistakes in localized documentation
@@ -218,6 +245,15 @@ rm -rf %{buildroot}
 %attr(0644,root,root) %{_mandir}/man3/*
 
 %changelog
+* Thu Jun 13 2013 Petr Pisar <ppisar@redhat.com> - 1:3.17-20
+- Close FILE handles on error too (bug #890051)
+
+* Wed Jun 12 2013 Petr Pisar <ppisar@redhat.com> - 1:3.17-19
+- Report quotacheck failures by return code (bug #717948)
+- Improve quotacheck error message (bug #717948)
+- Do not fiddle with quota files on XFS and GFS (bug #846120)
+- Allow to set limits using multiplicative units (bug #890051)
+
 * Tue Oct 02 2012 Petr Pisar <ppisar@redhat.com> - 1:3.17-18
 - Do not use real domains in warnquota example (bug #680919)
 - Disable grace period/times remote setting (bug #683554)
