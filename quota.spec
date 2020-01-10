@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 3.17
-Release: 20%{?dist}
+Release: 21%{?dist}
 License: BSD and GPLv2+
 URL: http://sourceforge.net/projects/linuxquota/
 Group: System Environment/Base
@@ -92,6 +92,9 @@ Patch38: quota-3.17-Recognize-units-at-inode-limits-by-setquota.patch
 Patch39: quota-3.17-Recognize-units-at-inode-limits-by-edquota.patch
 # Bug #890051, submited to upstream
 Patch40: quota-3.17-Close-FILE-handles-on-error.patch
+# Proposed to upstream, <https://sourceforge.net/p/linuxquota/bugs/115/>,
+# bug #1072404
+Patch41: quota-3.17-Prevent-from-grace-period-overflow-in-RPC-transport.patch
 
 
 %description
@@ -156,6 +159,7 @@ on remote machines.
 %patch38 -p1 -b .setquota_inode_units
 %patch39 -p1 -b .edquota_inode_units
 %patch40 -p1 -b .close_file_handles
+%patch41 -p1 -b .rpc_time
 
 
 #fix typos/mistakes in localized documentation
@@ -245,6 +249,9 @@ rm -rf %{buildroot}
 %attr(0644,root,root) %{_mandir}/man3/*
 
 %changelog
+* Wed Mar 05 2014 Petr Pisar <ppisar@redhat.com> - 1:3.17-21
+- Prevent from grace period overflow in RPC transport (bug #1072404)
+
 * Thu Jun 13 2013 Petr Pisar <ppisar@redhat.com> - 1:3.17-20
 - Close FILE handles on error too (bug #890051)
 
