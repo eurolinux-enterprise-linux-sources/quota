@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 3.17
-Release: 16%{?dist}
+Release: 18%{?dist}
 License: BSD and GPLv2+
 URL: http://sourceforge.net/projects/linuxquota/
 Group: System Environment/Base
@@ -62,6 +62,18 @@ Patch23: quota-4.00_pre1-Initialize-vfsold-block-and-inode-value-boundries-fo.pa
 Patch24: quota-4.00_pre1-Fix-ddquot-buffer-leak.patch
 # Bug #688161, in upstream 4.00_pre2
 Patch25: quota-4.00_pre1-fix-repquota-to-get-latest-quota-info-header.patch
+# Bug #770307, submitted to upstream, SF#3571486
+Patch26: quota-3.17-Make-group-warning-message-more-official.patch
+# Bug #680919, in upstream 4.00_pre2, SF#3195046
+Patch27: quota-3.17-Do-not-use-real-domains-in-warnquota-example.patch
+# Bug #683554, in upstream 4.00_pre2, SF#3202953
+Patch28: quota-4.00_pre1-Disable-grace-period-times-remote-setting.patch
+# Bug #692390, in upstream 4.00_pre2, SF#3279491
+Patch29: quota-4.00_pre1-Initialize-v2r1-ddquot-padding-in-dump.patch
+# Bug #704216, in upstream 4.00_pre2, SF#3300978
+Patch30: quota-4.00_pre1-Make-dirname-static.patch
+# Bug #730057, in upstream 4.01, SF#3393151
+Patch31: quota-4.00-Do-not-report-missing-utmp-record-to-syslog.patch
 
 
 %description
@@ -111,6 +123,12 @@ on remote machines.
 %patch23 -p1 -b .inizialize_vfsold_boundries
 %patch24 -p1 -b .fix_ddquot_leak
 %patch25 -p1 -b .repquota_latest_info.patch
+%patch26 -p1 -b .group_warning
+%patch27 -p1 -b .warnquota_domains
+%patch28 -p1 -b .disable_remote_grace_setting
+%patch29 -p1 -b .initizalize_ddquot_paddding
+%patch30 -p1 -b .static_dirname
+%patch31 -p1 -b .suppress_missing_utmp
 
 
 #fix typos/mistakes in localized documentation
@@ -200,6 +218,16 @@ rm -rf %{buildroot}
 %attr(0644,root,root) %{_mandir}/man3/*
 
 %changelog
+* Tue Oct 02 2012 Petr Pisar <ppisar@redhat.com> - 1:3.17-18
+- Do not use real domains in warnquota example (bug #680919)
+- Disable grace period/times remote setting (bug #683554)
+- Initialize v2r1 ddquot padding in dump (bug #692390)
+- Make dirname static to work with nss_db (bug #704216)
+- Do not report missing utmp record to syslog (bug #730057)
+
+* Tue Sep 25 2012 Petr Pisar <ppisar@redhat.com> - 1:3.17-17
+- Make group warning message more official (bug #770307)
+
 * Mon Mar 21 2011 Petr Pisar <ppisar@redhat.com> - 1:3.17-16
 - Fix repquota to get latest quota info header (bug #688161)
 
