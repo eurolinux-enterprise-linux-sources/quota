@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 3.17
-Release: 21%{?dist}
+Release: 23%{?dist}
 License: BSD and GPLv2+
 URL: http://sourceforge.net/projects/linuxquota/
 Group: System Environment/Base
@@ -93,8 +93,16 @@ Patch39: quota-3.17-Recognize-units-at-inode-limits-by-edquota.patch
 # Bug #890051, submited to upstream
 Patch40: quota-3.17-Close-FILE-handles-on-error.patch
 # Proposed to upstream, <https://sourceforge.net/p/linuxquota/bugs/115/>,
-# bug #1072404
+# bug #1066516
 Patch41: quota-3.17-Prevent-from-grace-period-overflow-in-RPC-transport.patch
+# Bug #1024097, in upstream 4.01
+Patch42: quota-3.17-Remove-fixed-limit-on-number-of-autofs-mount-points.patch
+# Bug #1009397, in upstream 4.02
+Patch43: quota-3.17-Properly-handle-signed-space-and-inode-values.patch
+# Bug #1009397, in upstream 4.02
+Patch44: quota-4.02-Fix-handling-of-space-and-inode-values.patch
+# Bug #1007785, in upstream after 4.00
+Patch45: quota-3.17-Fix-computation-of-dynamic-rpc-block-size.patch
 
 
 %description
@@ -160,6 +168,10 @@ on remote machines.
 %patch39 -p1 -b .edquota_inode_units
 %patch40 -p1 -b .close_file_handles
 %patch41 -p1 -b .rpc_time
+%patch42 -p1 -b .autofs_limit
+%patch43 -p1 -b .signed_values
+%patch44 -p1 -b .fix_signed_values
+%patch45 -p1 -b .fix_dynamic_rpc_block_size
 
 
 #fix typos/mistakes in localized documentation
@@ -249,8 +261,15 @@ rm -rf %{buildroot}
 %attr(0644,root,root) %{_mandir}/man3/*
 
 %changelog
+* Wed Jan 07 2015 Petr Pisar <ppisar@redhat.com> - 1:3.17-23
+- Fix computation of dynamic RPC block factor (bug #1007785)
+
+* Tue Jan 06 2015 Petr Pisar <ppisar@redhat.com> - 1:3.17-22
+- Remove fixed limit on number of autofs mount points (bug #1024097)
+- Print negative quota values properly (bug #1009397)
+
 * Wed Mar 05 2014 Petr Pisar <ppisar@redhat.com> - 1:3.17-21
-- Prevent from grace period overflow in RPC transport (bug #1072404)
+- Prevent from grace period overflow in RPC transport (bug #1066516)
 
 * Thu Jun 13 2013 Petr Pisar <ppisar@redhat.com> - 1:3.17-20
 - Close FILE handles on error too (bug #890051)
