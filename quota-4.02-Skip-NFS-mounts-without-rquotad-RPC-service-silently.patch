@@ -1,0 +1,125 @@
+From bffaeb028ee716ed46e5b74a45162f2ef45b2963 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Thu, 23 Oct 2014 14:12:01 +0200
+Subject: [PATCH] Skip NFS mounts without rquotad RPC service silently
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+If NFS server does uses quotas, then it's high chance the RCP rquotad
+service is not running at all. Then listing quotas for such NFS mount
+point results into a warning about "connection refused".
+
+This warning can be obtrusive if a host has mounted various mixture of
+NFS exports with and without quotas.
+
+This patch recognizes this special error state (after performing
+a query to a client without running rquotad) and considers such
+server as having quotas disabled. This silents the warning
+effectively.
+
+JK: Some coding style fixes, treat also rpc_set_quota() this way.
+
+Signed-off-by: Petr Písař <ppisar@redhat.com>
+Signed-off-by: Jan Kara <jack@suse.cz>
+---
+ rquota_client.c | 38 ++++++++++++++++++++++++++++++++++----
+ 1 file changed, 34 insertions(+), 4 deletions(-)
+
+diff --git a/rquota_client.c b/rquota_client.c
+index 9d4055e..a3a4ae3 100644
+--- a/rquota_client.c
++++ b/rquota_client.c
+@@ -148,6 +148,8 @@ int rpc_rquota_get(struct dquot *dquot)
+ 	} args;
+ 	char *fsname_tmp, *host, *pathname;
+ 	struct timeval timeout = { 2, 0 };
++	int rquotaprog_not_registered = 0;
++	int ret;
+ 
+ 	/*
+ 	 * Initialize with NULL.
+@@ -206,8 +208,11 @@ int rpc_rquota_get(struct dquot *dquot)
+ 		auth_destroy(clnt->cl_auth);
+ 		clnt_destroy(clnt);
+ 	}
+-	else
++	else {
+ 		result = NULL;
++		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
++			rquotaprog_not_registered = 1;
++	}
+ 
+ 	if (result == NULL || !result->status) {
+ 		if (dquot->dq_h->qh_type == USRQUOTA) {
+@@ -244,11 +249,21 @@ int rpc_rquota_get(struct dquot *dquot)
+ 				 */
+ 				auth_destroy(clnt->cl_auth);
+ 				clnt_destroy(clnt);
++			} else {
++				result = NULL;
++				if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
++					    rquotaprog_not_registered = 1;
+ 			}
+ 		}
+ 	}
+ 	free(fsname_tmp);
+-	return rquota_err(result?result->status:-1);
++	if (result)
++		ret = result->status;
++	else if (rquotaprog_not_registered)
++		ret = Q_NOQUOTA;
++	else
++		ret = -1;
++	return rquota_err(ret);
+ }
+ 
+ /*
+@@ -265,6 +280,8 @@ int rpc_rquota_set(int qcmd, struct dquot *dquot)
+ 	} args;
+ 	char *fsname_tmp, *host, *pathname;
+ 	struct timeval timeout = { 2, 0 };
++	int rquotaprog_not_registered = 0;
++	int ret;
+ 
+ 	/* RPC limits values to 32b variables. Prevent value wrapping. */
+ 	if (check_dquot_range(dquot) < 0)
+@@ -321,8 +338,11 @@ int rpc_rquota_set(int qcmd, struct dquot *dquot)
+ 		auth_destroy(clnt->cl_auth);
+ 		clnt_destroy(clnt);
+ 	}
+-	else
++	else {
+ 		result = NULL;
++		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
++			rquotaprog_not_registered = 1;
++	}
+ 
+ 	if (result == NULL || !result->status) {
+ 		if (dquot->dq_h->qh_type == USRQUOTA) {
+@@ -361,11 +381,21 @@ int rpc_rquota_set(int qcmd, struct dquot *dquot)
+ 				 */
+ 				auth_destroy(clnt->cl_auth);
+ 				clnt_destroy(clnt);
++			} else {
++				result = NULL;
++				if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
++					rquotaprog_not_registered = 1;
+ 			}
+ 		}
+ 	}
+ 	free(fsname_tmp);
+-	return rquota_err(result?result->status:-1);
++	if (result)
++		ret = result->status;
++	else if (rquotaprog_not_registered)
++		ret = Q_NOQUOTA;
++	else
++		ret = -1;
++	return rquota_err(ret);
+ #endif
+ 	return -1;
+ }
+-- 
+1.9.3
+

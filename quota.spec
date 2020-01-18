@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 4.01
-Release: 11%{?dist}.1
+Release: 14%{?dist}
 # quota_nld.c, quotaio_xfs.h:       GPLv2
 # bylabel.c copied from util-linux: GPLv2+
 # svc_socket.c copied from glibc:   LGPLv2+
@@ -18,7 +18,7 @@ Requires: tcp_wrappers
 Requires: quota-nls = %{epoch}:%{version}-%{release}
 Requires: rpcbind
 Conflicts: kernel < 2.4
-# nfs-utils used to provide nfs-rquotad.service, bug #1316440
+# nfs-utils used to provide nfs-rquotad.service, bug #1207239
 Conflicts: nfs-utils < 1:1.3.0-0.4.el7
 BuildRequires: e2fsprogs-devel gettext tcp_wrappers-devel
 BuildRequires: openldap-devel dbus-devel libnl-devel
@@ -74,6 +74,17 @@ Patch20: quota-4.01-Add-quotatab-5-manual-page.patch
 Patch21: quota-4.01-Add-warnquota.conf-5-manual-page.patch
 # Submitted to upstream, <https://sourceforge.net/p/linuxquota/patches/39/>
 Patch22: quota-4.01-Improve-rcp.rquota-8-manual-page.patch
+# Do not warn if rquotad RPC service is not registered, bug #1155584,
+# in upstream 4.02
+Patch23: quota-4.02-Skip-NFS-mounts-without-rquotad-RPC-service-silently.patch
+# Query kernel for next quota on file system with hiden quota files,
+# bug #1305968, in upstream after 4.03
+Patch24: quota-4.03-Scan-dquots-using-Q_GETNEXTQUOTA.patch
+# Query kernel for next XFS quota, bug #1305968, in upstream after 4.03
+Patch25: quota-4.03-Add-support-for-scanning-using-Q_XGETNEXTQUOTA.patch
+# Prevent from grace period overflow in RPC transport, bug #1072858,
+# in upstream 4.02
+Patch26: quota-4.01-Prevent-from-grace-period-overflow-in-RPC-transport.patch
 
 %description
 The quota package contains system administration tools for monitoring
@@ -167,6 +178,10 @@ Linux/UNIX environment.
 %patch20 -p1 -b .doc_quotatab
 %patch21 -p1 -b .doc_warnquota
 %patch22 -p1 -b .doc_rquota
+%patch23 -p1 -b .silent_no_rquotad
+%patch24 -p1 -b .getnextquota
+%patch25 -p1 -b .xgetnextquota
+%patch26 -p1 -b .rpc_time
 
 #fix typos/mistakes in localized documentation
 for pofile in $(find ./po/*.p*)
@@ -212,7 +227,7 @@ install -p -m644 -D %{SOURCE2} \
 install -p -m644 -D %{SOURCE3} $RPM_BUILD_ROOT%{_unitdir}/rpc-rquotad.service
 install -p -m644 -D %{SOURCE4} \
     $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/rpc-rquotad
-# For backward compatibilty, bug #1316440
+# For backward compatibilty, bug #1207239
 ln -s rpc-rquotad.service $RPM_BUILD_ROOT%{_unitdir}/nfs-rquotad.service
 
 %find_lang %{name}
@@ -291,11 +306,19 @@ echo '  systemd-sysv-convert --apply quota_nld'
 
 
 %changelog
-* Thu Mar 10 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-11.1
+* Thu Mar 10 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-14
+- Add nfs-rquotad.service alias for backward compatibility (bug #1207239)
+- Start rpc-rquotad.service when starting nfs-server.service (bug #1207239)
+
+* Fri Mar 04 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-13
+- Prevent from grace period overflow in RPC transport (bug #1072858)
+
+* Thu Mar 03 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-12
+- Do not warn if rquotad RPC service is not registered (bug #1155584)
+- Query kernel for next quota on XFS or file system with hidden quota files
+  (bug #1305968)
 - Add rpc-rquotad.service file which was known as nfs-rquotad.service
-  in nfs-utils (bug #1316440)
-- Add nfs-rquotad.service alias for backward compatibility (bug #1316440)
-- Start rpc-rquotad.service when starting nfs-server.service (bug #1316440)
+  in nfs-utils (bug #1207239)
 
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 1:4.01-11
 - Mass rebuild 2014-01-24
