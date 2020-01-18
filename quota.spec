@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 4.01
-Release: 11%{?dist}
+Release: 11%{?dist}.1
 # quota_nld.c, quotaio_xfs.h:       GPLv2
 # bylabel.c copied from util-linux: GPLv2+
 # svc_socket.c copied from glibc:   LGPLv2+
@@ -14,15 +14,23 @@ Release: 11%{?dist}
 License: BSD and LGPLv2+ and GPLv2 and GPLv2+
 URL: http://sourceforge.net/projects/linuxquota/
 Group: System Environment/Base
-Requires: initscripts >= 6.38 tcp_wrappers
+Requires: tcp_wrappers
 Requires: quota-nls = %{epoch}:%{version}-%{release}
+Requires: rpcbind
 Conflicts: kernel < 2.4
+# nfs-utils used to provide nfs-rquotad.service, bug #1316440
+Conflicts: nfs-utils < 1:1.3.0-0.4.el7
 BuildRequires: e2fsprogs-devel gettext tcp_wrappers-devel
 BuildRequires: openldap-devel dbus-devel libnl-devel
 BuildRequires: systemd-units
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
 Source0: http://downloads.sourceforge.net/linuxquota/%{name}-%{version}.tar.gz
 Source1: quota_nld.service
 Source2: quota_nld.sysconfig
+Source3: rpc-rquotad.service
+Source4: rpc-rquotad.sysconfig
 # Not accepted changes (378a64006bb1e818e84a1c77808563b802b028fa)
 # Some of the lines have been superseded by other commits probably.
 Patch0: quota-4.01-warnquota.patch
@@ -201,8 +209,23 @@ ln -s  quotaon.8.gz \
 install -p -m644 -D %{SOURCE1} $RPM_BUILD_ROOT%{_unitdir}/quota_nld.service
 install -p -m644 -D %{SOURCE2} \
     $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/quota_nld
+install -p -m644 -D %{SOURCE3} $RPM_BUILD_ROOT%{_unitdir}/rpc-rquotad.service
+install -p -m644 -D %{SOURCE4} \
+    $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/rpc-rquotad
+# For backward compatibilty, bug #1316440
+ln -s rpc-rquotad.service $RPM_BUILD_ROOT%{_unitdir}/nfs-rquotad.service
 
 %find_lang %{name}
+
+
+%post
+%systemd_post rpc-rquotad.service
+
+%preun
+%systemd_preun rpc-rquotad.service
+
+%postun
+%systemd_postun_with_restart rpc-rquotad.service
 
 
 %post nld
@@ -213,6 +236,7 @@ install -p -m644 -D %{SOURCE2} \
 
 %postun nld
 %systemd_postun_with_restart quota_nld.service
+
 
 %triggerun -- %{name}-nld < 1:4.00-2
 echo 'quota-nld: User must migrate to systemd target manually by runnig:'
@@ -225,6 +249,9 @@ echo '  systemd-sysv-convert --apply quota_nld'
 
 
 %files
+%config(noreplace) %{_sysconfdir}/sysconfig/rpc-rquotad
+%{_unitdir}/rpc-rquotad.service
+%{_unitdir}/nfs-rquotad.service
 %attr(0755,root,root) %{_bindir}/*
 %attr(0755,root,root) %{_sbindir}/*
 %exclude %{_sbindir}/quota_nld
@@ -264,6 +291,12 @@ echo '  systemd-sysv-convert --apply quota_nld'
 
 
 %changelog
+* Thu Mar 10 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-11.1
+- Add rpc-rquotad.service file which was known as nfs-rquotad.service
+  in nfs-utils (bug #1316440)
+- Add nfs-rquotad.service alias for backward compatibility (bug #1316440)
+- Start rpc-rquotad.service when starting nfs-server.service (bug #1316440)
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 1:4.01-11
 - Mass rebuild 2014-01-24
 
