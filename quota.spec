@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 4.01
-Release: 17%{?dist}
+Release: 19%{?dist}
 # quota_nld.c, quotaio_xfs.h:       GPLv2
 # bylabel.c copied from util-linux: GPLv2+
 # svc_socket.c copied from glibc:   LGPLv2+
@@ -94,6 +94,12 @@ Patch28: quota-4.03-quotacheck-Deallocate-memory-after-direct-scanning.patch
 Patch29: quota-4.01-Properly-handle-signed-space-and-inode-values.patch
 # Bug #1517822, in upstream 4.02
 Patch30: quota-4.02-Fix-handling-of-space-and-inode-values.patch
+# Bug #1601109, proposed to upstream,
+# <https://sourceforge.net/p/linuxquota/bugs/128/>
+Patch31: quota-4.01-quota-1-Distinguish-between-none-quota-limits-and-no.patch
+# Fix current block usage limit in RPC client, bug #1697605,
+# in upstream after 4.04, <https://sourceforge.net/p/linuxquota/bugs/127/>
+Patch32: quota-4.04-rpc-Fix-wrong-limit-for-space-usage.patch
 
 %description
 The quota package contains system administration tools for monitoring
@@ -195,6 +201,8 @@ Linux/UNIX environment.
 %patch28 -p1 -b .quotacheck_leak
 %patch29 -p1 -b .signed_values
 %patch30 -p1 -b .fix_signed_values
+%patch31 -p1 -b .nonequota
+%patch32 -p1
 
 #fix typos/mistakes in localized documentation
 for pofile in $(find ./po/*.p*)
@@ -319,6 +327,13 @@ echo '  systemd-sysv-convert --apply quota_nld'
 
 
 %changelog
+* Tue Apr 09 2019 Petr Pisar <ppisar@redhat.com> - 1:4.01-19
+- Fix current block usage limit in RPC client (bug #1697605)
+
+* Mon Jul 16 2018 Petr Pisar <ppisar@redhat.com> - 1:4.01-18
+- Distinguish between none quota limits and no allocated resources in quota(1)
+  tool (bug #1601109)
+
 * Mon Nov 27 2017 Petr Pisar <ppisar@redhat.com> - 1:4.01-17
 - Print negative quota values properly (bug #1517822)
 
