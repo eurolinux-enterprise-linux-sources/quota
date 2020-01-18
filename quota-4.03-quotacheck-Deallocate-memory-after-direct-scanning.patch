@@ -1,0 +1,99 @@
+From bf9b17da317ecf56ceada3a575fb95669bf2041b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20P=C3=ADsa=C5=99?= <ppisar@redhat.com>
+Date: Mon, 21 Aug 2017 13:02:21 +0200
+Subject: [PATCH] quotacheck: Deallocate memory after direct scanning
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+quotacheck had memory leaks because it did not clean up after direct
+ext scanning:
+
+==6885== 1,392 (88 direct, 1,304 indirect) bytes in 1 blocks are definitely lost in loss record 19 of 23
+==6885==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==6885==    by 0x4E5288B: ext2fs_make_generic_bitmap (in /usr/lib64/libext2fs.so.2.4)
+==6885==    by 0x4E47ED5: ext2fs_allocate_inode_bitmap (in /usr/lib64/libext2fs.so.2.4)
+==6885==    by 0x10BBA5: ext2_direct_scan (quotacheck.c:435)
+==6885==    by 0x10DA8A: check_dir (quotacheck.c:971)
+==6885==    by 0x10E634: check_all (quotacheck.c:1192)
+==6885==    by 0x10E6EC: main (quotacheck.c:1212)
+==6885==
+==6885== 8,464 (144 direct, 8,320 indirect) bytes in 1 blocks are definitely lost in loss record 22 of 23
+==6885==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==6885==    by 0x4E5749D: ext2fs_open_inode_scan (in /usr/lib64/libext2fs.so.2.4)
+==6885==    by 0x10BBF0: ext2_direct_scan (quotacheck.c:440)
+==6885==    by 0x10DA8A: check_dir (quotacheck.c:971)
+==6885==    by 0x10E634: check_all (quotacheck.c:1192)
+==6885==    by 0x10E6EC: main (quotacheck.c:1212)
+==6885==
+==6885== 15,243 (88 direct, 15,155 indirect) bytes in 1 blocks are definitely lost in loss record 23 of 23
+==6885==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==6885==    by 0x4E5288B: ext2fs_make_generic_bitmap (in /usr/lib64/libext2fs.so.2.4)
+==6885==    by 0x4E47ED5: ext2fs_allocate_inode_bitmap (in /usr/lib64/libext2fs.so.2.4)
+==6885==    by 0x10BB55: ext2_direct_scan (quotacheck.c:430)
+==6885==    by 0x10DA8A: check_dir (quotacheck.c:971)
+==6885==    by 0x10E634: check_all (quotacheck.c:1192)
+==6885==    by 0x10E6EC: main (quotacheck.c:1212)
+
+Signed-off-by: Petr Písař <ppisar@redhat.com>
+---
+ quotacheck.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/quotacheck.c b/quotacheck.c
+index 689ceb9..e9a84ba 100644
+--- a/quotacheck.c
++++ b/quotacheck.c
+@@ -429,21 +429,31 @@ static int ext2_direct_scan(const char *device)
+ 
+ 	if ((error = ext2fs_allocate_inode_bitmap(fs, "in-use inode map", &inode_used_map))) {
+ 		errstr(_("error (%d) while allocating file inode bitmap\n"), (int)error);
++		ext2fs_free(fs);
+ 		return -1;
+ 	}
+ 
+ 	if ((error = ext2fs_allocate_inode_bitmap(fs, "directory inode map", &inode_dir_map))) {
+ 		errstr(_("errstr (%d) while allocating directory inode bitmap\n"), (int)error);
++		ext2fs_free_inode_bitmap(inode_used_map);
++		ext2fs_free(fs);
+ 		return -1;
+ 	}
+ 
+ 	if ((error = ext2fs_open_inode_scan(fs, inode_buffer_blocks, &scan))) {
+ 		errstr(_("error (%d) while opening inode scan\n"), (int)error);
++		ext2fs_free_inode_bitmap(inode_dir_map);
++		ext2fs_free_inode_bitmap(inode_used_map);
++		ext2fs_free(fs);
+ 		return -1;
+ 	}
+ 
+ 	if ((error = ext2fs_get_next_inode(scan, &i_num, &inode))) {
+ 		errstr(_("error (%d) while starting inode scan\n"), (int)error);
++		ext2fs_close_inode_scan(scan);
++		ext2fs_free_inode_bitmap(inode_dir_map);
++		ext2fs_free_inode_bitmap(inode_used_map);
++		ext2fs_free(fs);
+ 		return -1;
+ 	}
+ 
+@@ -474,9 +484,17 @@ static int ext2_direct_scan(const char *device)
+ 
+ 		if ((error = ext2fs_get_next_inode(scan, &i_num, &inode))) {
+ 			errstr(_("Something weird happened while scanning. Error %d\n"), (int)error);
++			ext2fs_close_inode_scan(scan);
++			ext2fs_free_inode_bitmap(inode_dir_map);
++			ext2fs_free_inode_bitmap(inode_used_map);
++			ext2fs_free(fs);
+ 			return -1;
+ 		}
+ 	}
++	ext2fs_close_inode_scan(scan);
++	ext2fs_free_inode_bitmap(inode_dir_map);
++	ext2fs_free_inode_bitmap(inode_used_map);
++	ext2fs_free(fs);
+ 	return 0;
+ }
+ #endif
+-- 
+2.9.5
+

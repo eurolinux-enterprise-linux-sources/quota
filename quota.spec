@@ -5,7 +5,7 @@ Name: quota
 Summary: System administration tools for monitoring users' disk usage
 Epoch: 1
 Version: 4.01
-Release: 14%{?dist}
+Release: 17%{?dist}
 # quota_nld.c, quotaio_xfs.h:       GPLv2
 # bylabel.c copied from util-linux: GPLv2+
 # svc_socket.c copied from glibc:   LGPLv2+
@@ -85,6 +85,15 @@ Patch25: quota-4.03-Add-support-for-scanning-using-Q_XGETNEXTQUOTA.patch
 # Prevent from grace period overflow in RPC transport, bug #1072858,
 # in upstream 4.02
 Patch26: quota-4.01-Prevent-from-grace-period-overflow-in-RPC-transport.patch
+# Use direct scanning also for ext4, bug #1393849, in upsream after 4.03
+Patch27: quota-4.03-quotacheck-Use-direct-scanning-also-for-ext4.patch
+# Fix memory leaks when running quotacheck on ext file systems, bug #1483543,
+# <https://sourceforge.net/p/linuxquota/bugs/126/>
+Patch28: quota-4.03-quotacheck-Deallocate-memory-after-direct-scanning.patch
+# Bug #1517822, in upstream 4.02
+Patch29: quota-4.01-Properly-handle-signed-space-and-inode-values.patch
+# Bug #1517822, in upstream 4.02
+Patch30: quota-4.02-Fix-handling-of-space-and-inode-values.patch
 
 %description
 The quota package contains system administration tools for monitoring
@@ -182,6 +191,10 @@ Linux/UNIX environment.
 %patch24 -p1 -b .getnextquota
 %patch25 -p1 -b .xgetnextquota
 %patch26 -p1 -b .rpc_time
+%patch27 -p1 -b .directext4
+%patch28 -p1 -b .quotacheck_leak
+%patch29 -p1 -b .signed_values
+%patch30 -p1 -b .fix_signed_values
 
 #fix typos/mistakes in localized documentation
 for pofile in $(find ./po/*.p*)
@@ -306,6 +319,15 @@ echo '  systemd-sysv-convert --apply quota_nld'
 
 
 %changelog
+* Mon Nov 27 2017 Petr Pisar <ppisar@redhat.com> - 1:4.01-17
+- Print negative quota values properly (bug #1517822)
+
+* Mon Aug 21 2017 Petr Pisar <ppisar@redhat.com> - 1:4.01-16
+- Fix memory leaks when running quotacheck on ext file systems (bug #1483543)
+
+* Thu Nov 10 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-15
+- Use direct scanning also for ext4 (bug #1393849)
+
 * Thu Mar 10 2016 Petr Pisar <ppisar@redhat.com> - 1:4.01-14
 - Add nfs-rquotad.service alias for backward compatibility (bug #1207239)
 - Start rpc-rquotad.service when starting nfs-server.service (bug #1207239)
